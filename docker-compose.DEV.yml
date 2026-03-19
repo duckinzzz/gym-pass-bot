@@ -1,7 +1,7 @@
 services:
   bot:
     build: .
-    command: sh -c "watchfiles --ignore-paths .venv --ignore-paths .idea 'python run.py' ."
+    command: sh -c "watchfiles 'python run.py' ."
     env_file:
       - .env
     volumes:

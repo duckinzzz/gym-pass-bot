@@ -1,11 +1,13 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+from config import REFRESH_BUTTON_TEXT
+
+REFRESH_QR_CALLBACK = "refresh_qr"
 
 
-def _mk(buttons):
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-
-def main_kb(uid: int):
-    return _mk([
-        [InlineKeyboardButton(text="Button", callback_data=f"user:{uid}:default_button"), ],
-    ])
+async def refresh_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=REFRESH_BUTTON_TEXT, callback_data=REFRESH_QR_CALLBACK)],
+        ]
+    )

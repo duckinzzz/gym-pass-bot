@@ -1,48 +1,81 @@
-from aiogram import Router, types, F
+import asyncio
+
+from aiogram import F, Router, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandStart
 
 import keyboards as kb
-from core import logger
+from config import ADMIN_ID, QR_EXPIRED_TEXT, START_MESSAGE_TEXT
+from keyboards import REFRESH_QR_CALLBACK
+from utils import get_qr, send_error
 
-start_router = Router()
+start_router = Router(name="start_router")
+start_router.message.filter(F.from_user.id == ADMIN_ID)
+start_router.callback_query.filter(F.from_user.id == ADMIN_ID)
 
-
-def get_user_name(user: types.User):
-    if user.username:
-        return f"@{user.username}"
-    else:
-        return f"{user.first_name or user.id}"
+expire_tasks: dict[int, asyncio.Task[None]] = {}
 
 
 @start_router.message(CommandStart())
-async def cmd_start(message: types.Message):
-    user_name = get_user_name(message.from_user)
-    uid = message.from_user.id
-
-    welcome_text = (
-        f"aiogram template with echo-bot"
-    )
-
-    await message.answer(
-        welcome_text,
-        reply_markup=kb.main_kb(uid)
-    )
-
-    logger.info(f"User {user_name} ({uid}) started the bot")
+async def cmd_start(message: types.Message) -> None:
+    try:
+        await message.answer(
+            START_MESSAGE_TEXT,
+            reply_markup=await kb.refresh_kb(),
+        )
+    except Exception as error:
+        await send_error(message.bot, message.chat.id, error)
 
 
-@start_router.callback_query(F.data.split(':')[2] == 'default_button')
-async def process_button(callback: types.CallbackQuery):
-    await callback.answer('You pressed the button')
+@start_router.callback_query(F.data == REFRESH_QR_CALLBACK)
+async def refresh_qr(callback: types.CallbackQuery) -> None:
+    chat_id = callback.message.chat.id if callback.message else callback.from_user.id
 
+    try:
+        await callback.answer()
 
-@start_router.message()
-async def universal_handler(message: types.Message):
-    user_name = get_user_name(message.from_user)
-    content_type = str(message.content_type).split('.')[1]
-    text = message.text or message.caption
-    logger.info(f"\nuserID: {message.from_user.id}\nusername: {user_name}\ncontent_type: {content_type}\ntext: {text}")
-    await message.answer(f"userID: {message.from_user.id}\n"
-                         f"username: {user_name}\n"
-                         f"content_type: {content_type}\n"
-                         f"text: {text}")
+        if not callback.message:
+            return
+
+        task = expire_tasks.pop(chat_id, None)
+        if task:
+            task.cancel()
+
+        try:
+            await callback.message.delete()
+        except TelegramBadRequest as error:
+            if "message to delete not found" not in str(error).lower():
+                raise
+
+        photo, valid_time, qr_path = await get_qr()
+        try:
+            qr_message = await callback.message.answer_photo(
+                photo=photo,
+                reply_markup=await kb.refresh_kb(),
+            )
+        finally:
+            await asyncio.to_thread(qr_path.unlink, missing_ok=True)
+
+        async def expire() -> None:
+            try:
+                await asyncio.sleep(valid_time)
+                await callback.bot.edit_message_caption(
+                    chat_id=chat_id,
+                    message_id=qr_message.message_id,
+                    caption=QR_EXPIRED_TEXT,
+                    reply_markup=await kb.refresh_kb(),
+                )
+                expire_tasks.pop(chat_id, None)
+            except asyncio.CancelledError:
+                return
+            except TelegramBadRequest as error:
+                text = str(error).lower()
+                if "message to edit not found" in text or "message is not modified" in text:
+                    return
+                await send_error(callback.bot, chat_id, error)
+            except Exception as error:
+                await send_error(callback.bot, chat_id, error)
+
+        expire_tasks[chat_id] = asyncio.create_task(expire())
+    except Exception as error:
+        await send_error(callback.bot, chat_id, error)
