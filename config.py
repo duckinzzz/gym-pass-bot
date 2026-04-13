@@ -18,13 +18,13 @@ MOBIFITNESS_USER_AGENT = os.getenv("MOBIFITNESS_USER_AGENT")
 MOBIFITNESS_ACCEPT_LANGUAGE = os.getenv("MOBIFITNESS_ACCEPT_LANGUAGE")
 
 HTTP_TIMEOUT_SECONDS = 15.0
-START_MESSAGE_TEXT = "абоба"
+START_MESSAGE_TEXT = "ㅤ"
 QR_EXPIRED_TEXT = "КОД ИСТЕК"
 REFRESH_BUTTON_TEXT = "Обновить QR-код"
 DEV_PASS_DATA = {
     "code": "aboba",
     "type": "default",
-    "validTime": 300,
+    "validTime": 5,
     "validThru": "2026-03-19T17:43:21+10:00",
 }
 

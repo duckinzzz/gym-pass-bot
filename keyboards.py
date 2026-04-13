@@ -8,6 +8,6 @@ REFRESH_QR_CALLBACK = "refresh_qr"
 async def refresh_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=REFRESH_BUTTON_TEXT, callback_data=REFRESH_QR_CALLBACK)],
+            [InlineKeyboardButton(text=REFRESH_BUTTON_TEXT, style='success', callback_data=REFRESH_QR_CALLBACK)],
         ]
     )
