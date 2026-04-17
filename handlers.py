@@ -30,9 +30,10 @@ async def refresh_qr(callback: types.CallbackQuery) -> None:
 
     if not callback.message:
         return
-
+    loading_msg = await callback.message.answer('Загрузка...')
     photo, valid_time, qr_path = await get_qr()
     try:
+        await loading_msg.delete()
         qr_message = await callback.message.answer_photo(
             photo=photo,
         )
