@@ -37,10 +37,6 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ github.sha }}
-      - name: Make image public
-        env:
-          GH_TOKEN: ${{ secrets.GHCR_PAT }}
-        run: gh api -X PATCH /user/packages/container/${{ github.event.repository.name }}/visibility -f visibility=public
 
   deploy:
     needs: build
