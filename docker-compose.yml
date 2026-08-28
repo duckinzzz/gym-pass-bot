@@ -1,6 +1,7 @@
 services:
   bot:
-    build: .
+    image: ghcr.io/duckinzzz/gym-pass-bot:latest
+    container_name: gym-pass-bot
     restart: unless-stopped
     env_file:
       - .env
